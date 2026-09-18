@@ -330,9 +330,17 @@ func (e *Enemy) Draw(screen tcell.Screen) {
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ========================================================================
 
+//func drawString(screen tcell.Screen, x, y int, msg string, style tcell.Style) {
+//	for i, char := range msg {
+//		screen.SetContent(x+i, y, char, nil, style)
+//	}
+//}
+
 func drawString(screen tcell.Screen, x, y int, msg string, style tcell.Style) {
-	for i, char := range msg {
-		screen.SetContent(x+i, y, char, nil, style)
+	col := x
+	for _, char := range msg {
+		screen.SetContent(col, y, char, nil, style)
+		col++ // Увеличиваем позицию на 1 символ, а не на количество байт
 	}
 }
 
@@ -865,105 +873,111 @@ func main() {
 		// ОБРАБОТКА ВВОДА
 		// ============================================================
 		playerMoved := false
-		for screen.HasPendingEvent() {
-			ev := screen.PollEvent()
-			if key, ok := ev.(*tcell.EventKey); ok {
-				// Пауза
-				if key.Key() == tcell.KeyEscape && gameState == StatePlaying {
-					gameState = StatePaused
-					drawString(screen, 15, 10, "ПАУЗА (Esc)", tcell.StyleDefault.Foreground(colorUI))
-					drawString(screen, 8, 12, "-/=: громкость, M/N: вкл/выкл", tcell.StyleDefault.Foreground(colorUI))
-					screen.Show()
 
-					for {
-						pe := screen.PollEvent()
-						if pauseKey, ok := pe.(*tcell.EventKey); ok {
-							switch pauseKey.Key() {
-							case tcell.KeyEscape:
-								gameState = StatePlaying
-							}
-							switch pauseKey.Rune() {
-							case 'm', 'M':
-								sound.ToggleMusic()
-							case 'n', 'N':
-								sound.ToggleSound()
-							case '-', '_':
-								sound.VolumeDown()
-							case '=', '+':
-								sound.VolumeUp()
-							}
-							if gameState == StatePlaying {
-								break
-							}
-						}
-						time.Sleep(16 * time.Millisecond)
-					}
-					continue
-				}
+// Обработка всех доступных событий без блокировки
+for screen.HasPendingEvent() {
+    ev := screen.PollEvent()
+    if ev == nil {
+        break
+    }
+    
+    if key, ok := ev.(*tcell.EventKey); ok {
+        // Пауза
+        if key.Key() == tcell.KeyEscape && gameState == StatePlaying {
+            gameState = StatePaused
+            drawString(screen, 15, 10, "ПАУЗА (Esc)", tcell.StyleDefault.Foreground(colorUI))
+            drawString(screen, 8, 12, "-/=: громкость, M/N: вкл/выкл", tcell.StyleDefault.Foreground(colorUI))
+            screen.Show()
 
-				if gameState == StatePlaying {
-					switch key.Key() {
-					case tcell.KeyUp:
-						if player.Y > 1 {
-							player.Y--
-							playerMoved = true
-						}
-					case tcell.KeyDown:
-						if player.Y < gameHeight-2 {
-							player.Y++
-							playerMoved = true
-						}
-					case tcell.KeyLeft:
-						if player.X > 1 {
-							player.X--
-							playerMoved = true
-						}
-					case tcell.KeyRight:
-						if player.X < gameWidth-2 {
-							player.X++
-							playerMoved = true
-						}
-					}
+            for {
+                pe := screen.PollEvent()
+                if pauseKey, ok := pe.(*tcell.EventKey); ok {
+                    switch pauseKey.Key() {
+                    case tcell.KeyEscape:
+                        gameState = StatePlaying
+                    }
+                    switch pauseKey.Rune() {
+                    case 'm', 'M':
+                        sound.ToggleMusic()
+                    case 'n', 'N':
+                        sound.ToggleSound()
+                    case '-', '_':
+                        sound.VolumeDown()
+                    case '=', '+':
+                        sound.VolumeUp()
+                    }
+                    if gameState == StatePlaying {
+                        break
+                    }
+                }
+			time.Sleep(50 * time.Millisecond)  // Замедлит игру в 3 раза
+            }
+            continue
+        }
 
-					switch key.Rune() {
-					case 'q':
-						running = false
-					case 'w':
-						if player.Y > 1 {
-							player.Y--
-							playerMoved = true
-						}
-					case 's':
-						if player.Y < gameHeight-2 {
-							player.Y++
-							playerMoved = true
-						}
-					case 'a':
-						if player.X > 1 {
-							player.X--
-							playerMoved = true
-						}
-					case 'd':
-						if player.X < gameWidth-2 {
-							player.X++
-							playerMoved = true
-						}
-					case 'e', 'E':
-						coinsMoving = !coinsMoving
-					case 'm', 'M':
-						sound.ToggleMusic()
-					case 'n', 'N':
-						sound.ToggleSound()
-					case '-', '_':
-						sound.VolumeDown()
-					case '=', '+':
-						sound.VolumeUp()
-					}
-				}
-			} else if _, ok := ev.(*tcell.EventResize); ok {
-				screen.Sync()
-			}
-		}
+        if gameState == StatePlaying {
+            switch key.Key() {
+            case tcell.KeyUp:
+                if player.Y > 1 {
+                    player.Y--
+                    playerMoved = true
+                }
+            case tcell.KeyDown:
+                if player.Y < gameHeight-2 {
+                    player.Y++
+                    playerMoved = true
+                }
+            case tcell.KeyLeft:
+                if player.X > 1 {
+                    player.X--
+                    playerMoved = true
+                }
+            case tcell.KeyRight:
+                if player.X < gameWidth-2 {
+                    player.X++
+                    playerMoved = true
+                }
+            }
+
+            switch key.Rune() {
+            case 'q':
+                running = false
+            case 'w':
+                if player.Y > 1 {
+                    player.Y--
+                    playerMoved = true
+                }
+            case 's':
+                if player.Y < gameHeight-2 {
+                    player.Y++
+                    playerMoved = true
+                }
+            case 'a':
+                if player.X > 1 {
+                    player.X--
+                    playerMoved = true
+                }
+            case 'd':
+                if player.X < gameWidth-2 {
+                    player.X++
+                    playerMoved = true
+                }
+            case 'e', 'E':
+                coinsMoving = !coinsMoving
+            case 'm', 'M':
+                sound.ToggleMusic()
+            case 'n', 'N':
+                sound.ToggleSound()
+            case '-', '_':
+                sound.VolumeDown()
+            case '=', '+':
+                sound.VolumeUp()
+            }
+        }
+    } else if _, ok := ev.(*tcell.EventResize); ok {
+        screen.Sync()
+    }
+}
 
 		// ============================================================
 		// ПРОВЕРКА СТОЛКНОВЕНИЙ (ПРИ ДВИЖЕНИИ ИГРОКА)
@@ -1021,6 +1035,6 @@ func main() {
 			}
 		}
 
-		time.Sleep(16 * time.Millisecond)
+		time.Sleep(8 * time.Millisecond)
 	}
 }
